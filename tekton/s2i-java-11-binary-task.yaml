@@ -1,0 +1,84 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: s2i-java-11-binary
+spec:
+  params:
+  - default: .
+    description: The location of the path to run s2i from
+    name: PATH_CONTEXT
+    type: string
+  - default: "false"
+    description: Verify the TLS on the registry endpoint (for push/pull to a non-TLS registry)
+    name: TLSVERIFY
+    type: string
+  - description: The application image url in registry
+    name: IMAGE
+    type: string
+  stepTemplate:
+    env:
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+    name: ""
+    resources: {}
+  steps:
+  - command:
+    - s2i
+    - build
+    - $(params.PATH_CONTEXT)
+    - registry.access.redhat.com/openjdk/openjdk-11-rhel7
+    - --image-scripts-url
+    - image:///usr/local/s2i
+    - --as-dockerfile
+    - /gen-source/Dockerfile.gen
+    image: registry.redhat.io/ocp-tools-43-tech-preview/source-to-image-rhel8
+    name: generate
+    resources: {}
+    volumeMounts:
+    - mountPath: /env-params
+      name: envparams
+    - mountPath: /gen-source
+      name: gen-source
+    workingDir: $(workspaces.source.path)/target
+  - command:
+    - buildah
+    - bud
+    - --tls-verify=$(params.TLSVERIFY)
+    - --layers
+    - -f
+    - /gen-source/Dockerfile.gen
+    - -t
+    - $(params.IMAGE)
+    - .
+    image: registry.redhat.io/rhel8/buildah
+    name: build
+    resources: {}
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+    - mountPath: /gen-source
+      name: gen-source
+    workingDir: /gen-source
+  - command:
+    - buildah
+    - push
+    - --tls-verify=$(params.TLSVERIFY)
+    - $(params.IMAGE)
+    - docker://$(params.IMAGE)
+    image: registry.redhat.io/rhel8/buildah
+    name: push
+    resources: {}
+    volumeMounts:
+    - mountPath: /var/lib/containers
+      name: varlibcontainers
+  volumes:
+  - emptyDir: {}
+    name: varlibcontainers
+  - emptyDir: {}
+    name: gen-source
+  - emptyDir: {}
+    name: envparams
+  workspaces:
+  - name: source

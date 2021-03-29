@@ -1,0 +1,119 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: petclinic
+spec:
+  params:
+  - default: https://github.com/redhat-developer-demos/spring-petclinic.git
+    name: GIT_REPO
+    type: string
+  - default: spring-petclinic
+    name: APP_NAME
+    type: string
+  - default: main
+    name: GIT_REVISION
+    type: string
+  - default: quay.io/bluesman/spring-petclinic
+    name: IMAGE
+    type: string
+  - default: .
+    name: PATH_CONTEXT
+    type: string
+  tasks:
+  - name: git-clone
+    params:
+    - name: url
+      value: $(params.GIT_REPO)
+    - name: revision
+      value: $(params.GIT_REVISION)
+    - name: submodules
+      value: "true"
+    - name: depth
+      value: "1"
+    - name: sslVerify
+      value: "true"
+    - name: deleteExisting
+      value: "true"
+    - name: verbose
+      value: "true"
+    - name: gitInitImage
+      value: registry.redhat.io/openshift-pipelines-tech-preview/pipelines-git-init-rhel8@sha256:0938b8d7fdf79a92f22f7ac5e4cec1896ca7b6a441bb47124c9cafdc8d1efa89
+    taskRef:
+      kind: ClusterTask
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: workspace
+  - name: build
+    params:
+    - name: MAVEN_IMAGE
+      value: gcr.io/cloud-builders/mvn@sha256:57523fc43394d6d9d2414ee8d1c85ed7a13460cbb268c3cd16d28cfb3859e641
+    - name: GOALS
+      value:
+      - -DskipTests
+      - clean
+      - package
+    - name: PROXY_PROTOCOL
+      value: http
+    runAfter:
+    - git-clone
+    taskRef:
+      kind: ClusterTask
+      name: maven
+    workspaces:
+    - name: source
+      workspace: workspace
+    - name: maven-settings
+      workspace: maven-settings
+  - name: test
+    params:
+    - name: MAVEN_IMAGE
+      value: gcr.io/cloud-builders/mvn@sha256:57523fc43394d6d9d2414ee8d1c85ed7a13460cbb268c3cd16d28cfb3859e641
+    - name: GOALS
+      value:
+      - test
+    - name: PROXY_PROTOCOL
+      value: http
+    runAfter:
+    - build
+    taskRef:
+      kind: ClusterTask
+      name: maven
+    workspaces:
+    - name: source
+      workspace: workspace
+    - name: maven-settings
+      workspace: maven-settings
+  - name: containerize-and-push
+    params:
+    - name: PATH_CONTEXT
+      value: .
+    - name: TLSVERIFY
+      value: "false"
+    - name: IMAGE
+      value: $(params.IMAGE)
+    runAfter:
+    - test
+    taskRef:
+      kind: Task
+      name: s2i-java-11-binary
+    workspaces:
+    - name: source
+      workspace: workspace
+  - name: deploy
+    params:
+    - name: SCRIPT
+      value: kubectl $@
+    - name: ARGS
+      value:
+      - rollout
+      - status
+      - deploy/$(params.APP_NAME)
+    runAfter:
+    - containerize-and-push
+    taskRef:
+      kind: ClusterTask
+      name: openshift-client
+  workspaces:
+  - name: workspace
+  - name: maven-settings

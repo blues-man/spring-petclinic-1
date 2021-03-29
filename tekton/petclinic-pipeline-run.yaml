@@ -1,0 +1,27 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: petclinic-pipeline-run-
+  labels:
+    tekton.dev/pipeline: petclinic
+spec:
+  params:
+    - name: GIT_REPO
+      value: 'https://github.com/redhat-developer-demos/spring-petclinic.git'
+    - name: APP_NAME
+      value: spring-petclinic
+    - name: GIT_REVISION
+      value: main
+    - name: IMAGE
+      value: quay.io/bluesman/spring-petclinic
+    - name: PATH_CONTEXT
+      value: .
+  pipelineRef:
+    name: petclinic
+  serviceAccountName: pipeline
+  workspaces:
+    - name: workspace
+      persistentVolumeClaim:
+        claimName: app-source
+    - emptyDir: {}
+      name: maven-settings

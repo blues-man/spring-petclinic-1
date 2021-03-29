@@ -1,5 +1,82 @@
 # Spring PetClinic Sample Application [![Build Status](https://travis-ci.org/spring-projects/spring-petclinic.png?branch=main)](https://travis-ci.org/spring-projects/spring-petclinic/)
 
+
+## DevSecOps Pipeline on OpenShift using Quay.io
+
+![Pipeline](tekton/pipeline.png)
+
+
+### Deploy app on OpenShift
+
+```
+oc new-app https://github.com/blues-man/spring-petclinic-1.git
+```
+
+### Install OpenShift Pipelines Operator
+
+Install OpenShift Pipelines Operator from OperatorHub, from Web Console, go to Operators→ OperatorHub.
+
+![OperatorHub](https://redhat-scholars.github.io/openshift-starter-guides/rhs-openshift-starter-guides/4.6/_images/prerequisites_operatorhub.png)
+
+
+### Setup quay.io authentication
+
+* Create an account on [Quay.io](https://quay.io) if you do not already have one.
+* Login to quay.io in the web user interface and click on the username in the top right corner.
+* Select account settings.
+* Click the blue hyperlink ‘Generate Encrypted Password’.
+* Re-enter your password when prompted.
+* Copy the password
+
+### Create a Project
+
+```
+oc new-project petclinic
+```
+
+### Create a Secret with your Quay.io credentials
+
+```
+oc create secret docker-registry quay-secret --docker-server=quay.io --docker-username=<USERNAME> --docker-password=<ENCRYPTED_PASSWORD>
+
+```
+
+### Link Secret to pipeline ServiceAccount
+
+
+```
+oc secret link pipeline quay-secret
+```
+
+
+### Create Storage for the Pipeline
+
+
+```
+oc create -f tekton/app-source-pvc.yaml
+```
+
+### Create S2I Java 11 Binary Task
+
+```
+oc create -f tekton/s2i-java-11-binary-task.yaml
+```
+
+### Create Pipeline
+
+
+```
+oc create -f tekton/petclinic-pipeline.yaml
+
+```
+
+
+### Run the Pipeline
+
+```
+oc create -f tekton/petclinic-pipeline-run.yaml
+```
+
 ## Understanding the Spring Petclinic application with a few diagrams
 <a href="https://speakerdeck.com/michaelisvy/spring-petclinic-sample-application">See the presentation here</a>
 
