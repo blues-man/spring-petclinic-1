@@ -6,6 +6,12 @@
 ![Pipeline](tekton/pipeline.png)
 
 
+### Create a Project
+
+```
+oc new-project petclinic
+```
+
 ### Deploy app on OpenShift
 
 ```
@@ -27,12 +33,6 @@ Install OpenShift Pipelines Operator from OperatorHub, from Web Console, go to O
 * Click the blue hyperlink ‘Generate Encrypted Password’.
 * Re-enter your password when prompted.
 * Copy the password
-
-### Create a Project
-
-```
-oc new-project petclinic
-```
 
 ### Create a Secret with your Quay.io credentials
 
