@@ -3,7 +3,7 @@ WORKDIR /opt/app
 COPY . .
 RUN mvn clean package
 
-FROM jboss/base-jdk:11
+FROM openjdk:11
 COPY --from=builder /opt/app/target/*.jar /spring-petclinic.jar
 CMD java -jar /spring-petclinic.jar
 EXPOSE 8080
