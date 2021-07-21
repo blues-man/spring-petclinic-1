@@ -5,7 +5,8 @@ projects:
   - name: spring-petclinic
     source:
       type: git
-      location: 'http://gogs-cicd.apps.cluster-b237.b237.sandbox1343.opentlc.com/gogs/spring-petclinic.git'
+      location: 'https://github.com/blues-man/spring-petclinic-1'
+      branch: 'main'
 components:
   - id: redhat/java11/latest
     type: chePlugin
